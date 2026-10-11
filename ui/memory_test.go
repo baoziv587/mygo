@@ -64,9 +64,9 @@ func TestRemovedContentReleasesResources(t *testing.T) {
 func TestElementArenaFollowsViewSize(t *testing.T) {
 	for _, exits := range []bool{false, true} {
 		t.Run(map[bool]string{false: "plain", true: "exit"}[exits], func(t *testing.T) {
-			rows := 1000
+			rows, leaving := 1000, exits
 			tt := coreNewTester(func(c *context) {
-				if exits {
+				if leaving {
 					// First, so that it does not move as the rows change
 					coreBox(c).Key("leaving").Transition(ElementTransition{Exit: &Motion{}})
 				}
@@ -85,6 +85,13 @@ func TestElementArenaFollowsViewSize(t *testing.T) {
 			tt.Frame()
 			if n := testing.AllocsPerRun(20, tt.Frame); n > 2 {
 				t.Fatalf("the steady view allocates %.0f times per frame", n)
+			}
+			// Without exit transitions, the spare arena is not built into.
+			leaving = false
+			tt.Frame()
+			tt.Frame()
+			if n := len(tt.rt.c.spare); n > 1 {
+				t.Fatalf("the spare arena kept %d chunks without exit transitions", n)
 			}
 		})
 	}
